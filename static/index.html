@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080, initial-scale=1.0">
+    <title>铁路调度模拟器 - Rail Route</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #050810;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            overflow: hidden;
+            width: 1920px;
+            height: 1080px;
+        }
+
+        #app {
+            width: 1920px;
+            height: 1080px;
+            position: relative;
+            background: #0a0f1e;
+            overflow: hidden;
+        }
+
+        /* 顶部状态栏 */
+        .top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: #1a1f2e;
+            border-bottom: 1px solid #2a3040;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            z-index: 100;
+        }
+
+        .top-title {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #8b92a8;
+            font-size: 13px;
+            letter-spacing: 1px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #252b3d;
+            padding: 4px 12px;
+            border-radius: 4px;
+            border: 1px solid #3a4050;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .stat-icon {
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-gold { color: #f1c40f; }
+        .stat-star { color: #f1c40f; }
+        .stat-green { color: #2ecc71; }
+        .stat-red { color: #e74c3c; }
+
+        .top-actions {
+            position: absolute;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            background: #252b3d;
+            border: 1px solid #3a4050;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #8b92a8;
+            font-size: 18px;
+        }
+
+        /* 左侧车站面板 */
+        .side-panel {
+            position: absolute;
+            left: 0;
+            top: 50px;
+            width: 260px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 10px;
+            z-index: 50;
+        }
+
+        .station-card {
+            background: #141925;
+            border: 1px solid #2a3045;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .station-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .station-header.cumbernauld { background: #4a5568; color: #cbd5e0; }
+        .station-header.ashfield { background: #00b5b8; color: #fff; }
+
+        .station-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .station-actions span {
+            cursor: pointer;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .timetable {
+            padding: 8px;
+        }
+
+        .time-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 4px 4px;
+            font-size: 11px;
+            color: #5a6070;
+            border-bottom: 1px solid #2a3040;
+        }
+
+        .time-header .active {
+            color: #fff;
+            font-weight: 700;
+            background: #2a3040;
+            padding: 0 4px;
+            border-radius: 2px;
+        }
+
+        .track-row {
+            display: flex;
+            align-items: center;
+            height: 28px;
+            border-bottom: 1px solid #1a2030;
+        }
+
+        .track-label {
+            width: 24px;
+            text-align: center;
+            font-size: 11px;
+            color: #5a6070;
+        }
+
+        .track-cells {
+            flex: 1;
+            display: flex;
+            gap: 2px;
+            padding: 0 4px;
+        }
+
+        .track-cell {
+            flex: 1;
+            height: 16px;
+            background: #1a2030;
+            border-radius: 2px;
+            position: relative;
+        }
+
+        .track-cell.occupied {
+            background: #4a5568;
+        }
+
+        .track-cell.active {
+            background: #00b5b8;
+        }
+
+        /* 主地图区域 */
+        .map-container {
+            position: absolute;
+            top: 50px;
+            left: 260px;
+            right: 0;
+            bottom: 140px;
+            background: #0b1120;
+        }
+
+        .grid-bg {
+            position: absolute;
+            inset: 0;
+            background-image: 
+                radial-gradient(circle, #1a2438 1px, transparent 1px);
+            background-size: 24px 24px;
+            opacity: 0.6;
+        }
+
+        /* 导航箭头 */
+        .nav-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 48px;
+            height: 80px;
+            background: rgba(20, 25, 40, 0.8);
+            border: 1px solid #2a3045;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #5a6078;
+            cursor: pointer;
+            z-index: 40;
+            border-radius: 4px;
+        }
+
+        .nav-arrow.left { left: 10px; }
+        .nav-arrow.right { right: 10px; }
+
+        /* 车站标签 */
+        .station-tag {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            z-index: 30;
+        }
+
+        .tag-label {
+            padding: 6px 14px;
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            border-radius: 2px;
+            text-transform: uppercase;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        .tag-ashfield { background: #00c8cb; color: #fff; }
+        .tag-springburn { background: #e74c3c; color: #fff; }
+        .tag-queen { background: #9b59b6; color: #fff; }
+
+        .tag-icons {
+            display: flex;
+            gap: 4px;
+        }
+
+        .tag-icon {
+            width: 26px;
+            height: 26px;
+            background: #1a2535;
+            border: 1px solid #3a4555;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #2ecc71;
+        }
+
+        .tag-icon.home {
+            color: #ecf0f1;
+            font-size: 14px;
+        }
+
+        /* 底部控制栏 */
+        .bottom-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 140px;
+            background: #141925;
+            border-top: 1px solid #2a3045;
+            z-index: 100;
+        }
+
+        .time-control {
+            position: absolute;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .time-display {
+            background: #1a2030;
+            border: 1px solid #3a4555;
+            padding: 10px 24px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 32px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+        }
+
+        .time-display .clock-icon {
+            color: #f1c40f;
+            font-size: 24px;
+        }
+
+        .time-display .ms {
+            font-size: 14px;
+            color: #5a6078;
+            margin-left: 2px;
+        }
+
+        .speed-controls {
+            display: flex;
+            gap: 6px;
+        }
+
+        .speed-btn {
+            background: #1a2030;
+            border: 1px solid #3a4555;
+            color: #8b92a8;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .speed-btn.active {
+            background: #f1c40f;
+            color: #1a2030;
+            border-color: #f1c40f;
+        }
+
+        /* Upcoming Trains */
+        .upcoming-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 20px;
+        }
+
+        .upcoming-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #ecf0f1;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding-right: 20px;
+            border-right: 1px solid #2a3045;
+        }
+
+        .upcoming-title .icon {
+            color: #f1c40f;
+            font-size: 20px;
+        }
+
+        .train-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 8px 16px;
+            background: #1a2030;
+            border: 1px solid #2a3045;
+            border-radius: 6px;
+            min-width: 160px;
+        }
+
+        .train-id {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #ecf0f1;
+        }
+
+        .train-id .train-icon {
+            color: #f1c40f;
+            font-size: 12px;
+        }
+
+        .train-time {
+            font-size: 13px;
+            color: #8b92a8;
+            font-weight: 600;
+        }
+
+        .train-dest {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            margin-top: 2px;
+        }
+
+        .dest-tag {
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .dest-ashfield { background: #00c8cb; color: #fff; }
+        .dest-bridgeton { background: #d4ac5a; color: #1a2030; }
+
+        .platform-tag {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #8b92a8;
+            font-size: 12px;
+        }
+
+        .bottom-actions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .bottom-action-btn {
+            width: 44px;
+            height: 44px;
+            background: #1a2030;
+            border: 1px solid #3a4555;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8b92a8;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        /* SVG 样式 */
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .track-line {
+            fill: none;
+            stroke: #b0b8c8;
+            stroke-width: 4;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .track-line.active {
+            stroke: #e74c3c;
+        }
+
+        .track-line.green {
+            stroke: #2ecc71;
+        }
+
+        .track-fill {
+            fill: none;
+            stroke: #b0b8c8;
+            stroke-width: 8;
+            opacity: 0.3;
+        }
+
+        .switch-line {
+            fill: none;
+            stroke: #b0b8c8;
+            stroke-width: 3;
+        }
+
+        .signal {
+            fill: #b0b8c8;
+        }
+
+        .signal.red {
+            fill: #e74c3c;
+        }
+
+        .signal.green {
+            fill: #2ecc71;
+        }
+
+        .train-rect {
+            rx: 2;
+        }
+
+        .track-number {
+            fill: #5a6078;
+            font-size: 14px;
+            font-weight: 600;
+            text-anchor: middle;
+        }
+
+        .platform-block {
+            fill: #1a2535;
+            stroke: #3a4555;
+            stroke-width: 2;
+        }
+
+        .platform-line {
+            fill: none;
+            stroke: #ecf0f1;
+            stroke-width: 3;
+            stroke-dasharray: 4,4;
+        }
+
+        .train-label {
+            fill: #00c8cb;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .train-label.purple {
+            fill: #bb8fce;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部状态栏 -->
+        <div class="top-bar">
+            <div class="top-title">铁路调度模拟器 - 宣传片和截图</div>
+            <div class="stat-item stat-gold">
+                <span class="stat-icon">📁</span>
+                <span>45,650</span>
+            </div>
+            <div class="stat-item stat-star">
+                <span class="stat-icon">⭐</span>
+                <span>29</span>
+            </div>
+            <div class="stat-item stat-green">
+                <span class="stat-icon">🖥️</span>
+                <span>35</span>
+            </div>
+            <div class="stat-item stat-red">
+                <span class="stat-icon">🚂</span>
+                <span>14</span>
+            </div>
+            <div class="top-actions">
+                <div class="icon-btn">?</div>
+                <div class="icon-btn">☰</div>
+            </div>
+        </div>
+
+        <!-- 左侧车站面板 -->
+        <div class="side-panel">
+            <div class="station-card">
+                <div class="station-header cumbernauld">
+                    <span>Cumbernauld</span>
+                    <div class="station-actions">
+                        <span>ⓘ</span>
+                        <span>⚙</span>
+                        <span>×</span>
+                        <span>›</span>
+                    </div>
+                </div>
+                <div class="timetable">
+                    <div class="time-header">
+                        <span>20:50</span>
+                        <span class="active">20:56</span>
+                        <span>21:00</span>
+                        <span>21:10</span>
+                        <span>21:20</span>
+                    </div>
+                    <div class="track-row">
+                        <div class="track-label">1</div>
+                        <div class="track-cells">
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                        </div>
+                    </div>
+                    <div class="track-row">
+                        <div class="track-label">2</div>
+                        <div class="track-cells">
+                            <div class="track-cell occupied"></div>
+                            <div class="track-cell occupied"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell occupied"></div>
+                            <div class="track-cell"></div>
+                        </div>
+                    </div>
+                    <div class="track-row">
+                        <div class="track-label">3</div>
+                        <div class="track-cells">
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell occupied"></div>
+                            <div class="track-cell occupied"></div>
+                            <div class="track-cell"></div>
+                        </div>
+                    </div>
+                    <div class="track-row">
+                        <div class="track-label">4</div>
+                        <div class="track-cells">
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell occupied"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="station-card">
+                <div class="station-header ashfield">
+                    <span>Ashfield</span>
+                    <div class="station-actions">
+                        <span>ⓘ</span>
+                        <span>⚙</span>
+                        <span>×</span>
+                        <span>›</span>
+                    </div>
+                </div>
+                <div class="timetable">
+                    <div class="time-header">
+                        <span>20:50</span>
+                        <span class="active">20:56</span>
+                        <span>21:00</span>
+                        <span>21:10</span>
+                        <span>21:20</span>
+                    </div>
+                    <div class="track-row">
+                        <div class="track-label">1</div>
+                        <div class="track-cells">
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                        </div>
+                    </div>
+                    <div class="track-row">
+                        <div class="track-label">2</div>
+                        <div class="track-cells">
+                            <div class="track-cell"></div>
+                            <div class="track-cell occupied"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell occupied"></div>
+                        </div>
+                    </div>
+                    <div class="track-row">
+                        <div class="track-label">3</div>
+                        <div class="track-cells">
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell occupied"></div>
+                        </div>
+                    </div>
+                    <div class="track-row">
+                        <div class="track-label">4</div>
+                        <div class="track-cells">
+                            <div class="track-cell occupied"></div>
+                            <div class="track-cell active"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                            <div class="track-cell"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主地图 -->
+        <div class="map-container">
+            <div class="grid-bg"></div>
+            
+            <div class="nav-arrow left">‹</div>
+            <div class="nav-arrow right">›</div>
+
+            <!-- 车站标签 -->
+            <div class="station-tag" style="left: 40px; top: 45%;">
+                <div class="tag-label tag-ashfield">ASHFIELD</div>
+                <div class="tag-icons">
+                    <div class="tag-icon home">⌂</div>
+                    <div class="tag-icon">↗</div>
+                    <div class="tag-icon">↗</div>
+                    <div class="tag-icon">↗</div>
+                    <div class="tag-icon">↗</div>
+                </div>
+            </div>
+
+            <div class="station-tag" style="right: 400px; top: 12%;">
+                <div class="tag-label tag-springburn">SPRINGBURN</div>
+                <div class="tag-icons">
+                    <div class="tag-icon home">⌂</div>
+                    <div class="tag-icon">↗</div>
+                    <div class="tag-icon">↗</div>
+                    <div class="tag-icon">↗</div>
+                    <div class="tag-icon">↗</div>
+                </div>
+            </div>
+
+            <div class="station-tag" style="right: 200px; top: 42%;">
+                <div class="tag-label tag-queen">QUEEN STREET</div>
+                <div class="tag-icons">
+                    <div class="tag-icon home">⌂</div>
+                    <div class="tag-icon">↗</div>
+                    <div class="tag-icon">↗</div>
+                    <div class="tag-icon">↗</div>
+                    <div class="tag-icon">↗</div>
+                </div>
+            </div>
+
+            <svg viewBox="0 0 1660 890" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                        <path d="M0,0 L0,6 L9,3 z" fill="#b0b8c8" />
+                    </marker>
+                    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                        <path d="M0,0 L0,6 L9,3 z" fill="#2ecc71" />
+                    </marker>
+                    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                        <path d="M0,0 L0,6 L9,3 z" fill="#e74c3c" />
+                    </marker>
+                </defs>
+
+                <!-- 轨道底层阴影 -->
+                <g class="tracks-shadow">
+                    <!-- 主线轨道 -->
+                    <path class="track-fill" d="M 50,400 L 300,400 L 400,400 L 500,400 L 600,400 L 700,400 L 800,400 L 900,400 L 1000,400 L 1100,400 L 1200,400 L 1300,400 L 1400,400 L 1500,400 L 1600,400" />
+                    <path class="track-fill" d="M 50,500 L 300,500 L 400,500 L 500,500 L 600,500 L 700,500 L 800,500 L 900,500 L 1000,500 L 1100,500 L 1200,500 L 1300,500 L 1400,500 L 1500,500" />
+                    <path class="track-fill" d="M 50,600 L 300,600 L 400,600 L 500,600 L 600,600 L 700,600 L 800,600 L 900,600 L 1000,600 L 1100,600 L 1200,600 L 1300,600 L 1400,600 L 1500,600" />
+                    
+                    <!-- Springburn 支线 -->
+                    <path class="track-fill" d="M 700,400 L 750,300 L 850,200 L 950,200 L 1050,200 L 1150,200 L 1250,200" />
+                    <path class="track-fill" d="M 700,500 L 750,400 L 850,300 L 950,300 L 1050,300 L 1150,300 L 1250,300" />
+                </g>
+
+                <!-- 道岔和连接线 -->
+                <g class="switches">
+                    <!-- Ashfield 区域道岔 -->
+                    <path class="switch-line" d="M 300,400 L 350,500" />
+                    <path class="switch-line" d="M 300,500 L 350,400" />
+                    <path class="switch-line" d="M 300,500 L 350,600" />
+                    <path class="switch-line" d="M 300,600 L 350,500" />
+                    
+                    <!-- 中间道岔 -->
+                    <path class="switch-line" d="M 600,400 L 650,500" />
+                    <path class="switch-line" d="M 600,500 L 650,400" />
+                    <path class="switch-line" d="M 600,500 L 650,600" />
+                    <path class="switch-line" d="M 600,600 L 650,500" />
+                    
+                    <!-- Springburn 连接线 -->
+                    <path class="switch-line" d="M 700,400 L 750,300" />
+                    <path class="switch-line" d="M 700,500 L 750,400" />
+                    
+                    <!-- Queen Street 区域道岔 -->
+                    <path class="switch-line" d="M 1100,400 L 1150,500" />
+                    <path class="switch-line" d="M 1100,500 L 1150,400" />
+                    <path class="switch-line" d="M 1100,500 L 1150,600" />
+                    <path class="switch-line" d="M 1100,600 L 1150,500" />
+                    
+                    <!-- 右侧延伸 -->
+                    <path class="switch-line" d="M 1400,500 L 1450,650 L 1550,750 L 1600,800" />
+                    <path class="switch-line" d="M 1400,600 L 1450,700 L 1550,800 L 1600,850" />
+                </g>
+
+                <!-- 主轨道线 -->
+                <g class="main-tracks">
+                    <!-- 轨道 2 (上方主线) -->
+                    <path class="track-line" d="M 50,400 L 300,400 L 400,400 L 500,400 L 600,400 L 700,400 L 800,400 L 900,400 L 1000,400 L 1100,400" marker-end="url(#arrow)" />
+                    <text x="320" y="390" class="track-number">2</text>
+                    
+                    <!-- 轨道 3 (中间主线) -->
+                    <path class="track-line" d="M 50,500 L 300,500 L 400,500 L 500,500 L 600,500 L 700,500 L 800,500 L 900,500 L 1000,500 L 1100,500" marker-end="url(#arrow)" />
+                    <text x="320" y="490" class="track-number">3</text>
+                    
+                    <!-- 轨道 4 (下方主线) -->
+                    <path class="track-line" d="M 50,600 L 300,600 L 400,600 L 500,600 L 600,600 L 700,600 L 800,600 L 900,600 L 1000,600 L 1100,600 L 1200,600 L 1300,600 L 1400,600" marker-end="url(#arrow)" />
+                    <text x="320" y="590" class="track-number">4</text>
+                    
+                    <!-- Springburn 轨道 1 -->
+                    <path class="track-line" d="M 700,400 L 750,300 L 850,200 L 950,200 L 1050,200 L 1150,200 L 1250,200" marker-end="url(#arrow)" />
+                    <text x="720" y="190" class="track-number">1</text>
+                    
+                    <!-- Springburn 轨道 2 -->
+                    <path class="track-line" d="M 700,500 L 750,400 L 850,300 L 950,300 L 1050,300 L 1150,300 L 1250,300" marker-end="url(#arrow)" />
+                    <text x="720" y="290" class="track-number">2</text>
+                    
+                    <!-- Queen Street 轨道 5 -->
+                    <path class="track-line green" d="M 1100,400 L 1200,400 L 1300,400" marker-end="url(#arrow-green)" />
+                    <text x="1120" y="390" class="track-number" style="fill:#2ecc71">5</text>
+                    
+                    <!-- Queen Street 轨道 4 -->
+                    <path class="track-line" d="M 1100,500 L 1200,500 L 1300,500 L 1400,500" marker-end="url(#arrow)" />
+                    <text x="1120" y="490" class="track-number">4</text>
+                    
+                    <!-- Queen Street 轨道 3 -->
+                    <path class="track-line" d="M 1100,600 L 1200,600 L 1300,600 L 1400,600" marker-end="url(#arrow)" />
+                    <text x="1120" y="590" class="track-number">3</text>
+                    
+                    <!-- 右侧延伸轨道 -->
+                    <path class="track-line" d="M 1400,500 L 1450,650 L 1550,750 L 1600,800" marker-end="url(#arrow)" />
+                    <path class="track-line" d="M 1400,600 L 1450,700 L 1550,800 L 1600,850" marker-end="url(#arrow)" />
+                </g>
+
+                <!-- 站台/停车标记 -->
+                <g class="platforms">
+                    <rect x="480" y="385" width="40" height="30" class="platform-block" rx="2" />
+                    <line x1="485" y1="400" x2="515" y2="400" class="platform-line" />
+                    
+                    <rect x="580" y="585" width="40" height="30" class="platform-block" rx="2" />
+                    <line x1="585" y1="600" x2="615" y2="600" class="platform-line" />
+                    
+                    <rect x="780" y="185" width="40" height="30" class="platform-block" rx="2" />
+                    <line x1="785" y1="200" x2="815" y2="200" class="platform-line" />
+                    
+                    <rect x="1180" y="385" width="40" height="30" class="platform-block" rx="2" />
+                    <line x1="1185" y1="400" x2="1215" y2="400" class="platform-line" />
+                </g>
+
+                <!-- 信号灯 -->
+                <g class="signals">
+                    <!-- 绿色信号灯 -->
+                    <polygon points="640,395 655,400 640,405" class="signal green" />
+                    <polygon points="640,495 655,500 640,505" class="signal green" />
+                    <polygon points="640,595 655,600 640,605" class="signal green" />
+                    
+                    <!-- 红色信号灯 -->
+                    <polygon points="1060,395 1075,400 1060,405" class="signal red" />
+                    <polygon points="1060,495 1075,500 1060,505" class="signal red" />
+                    
+                    <!-- Springburn 信号灯 -->
+                    <polygon points="840,195 855,200 840,205" class="signal" />
+                    <polygon points="840,295 855,300 840,305" class="signal" />
+                </g>
+
+                <!-- 列车 -->
+                <g class="trains">
+                    <!-- 紫色列车 (Queen Street 方向) -->
+                    <rect x="1250" y="460" width="60" height="14" fill="#9b59b6" class="train-rect" transform="rotate(30 1280 467)" />
+                    <rect x="1260" y="455" width="12" height="24" fill="#ecf0f1" class="train-rect" transform="rotate(30 1266 467)" />
+                    <rect x="1276" y="446" width="12" height="24" fill="#ecf0f1" class="train-rect" transform="rotate(30 1282 458)" />
+                    <rect x="1292" y="437" width="12" height="24" fill="#ecf0f1" class="train-rect" transform="rotate(30 1298 449)" />
+                    
+                    <!-- 青色列车 Com9040 -->
+                    <rect x="520" y="586" width="50" height="12" fill="#00c8cb" class="train-rect" rx="2" />
+                    <rect x="525" y="582" width="10" height="20" fill="#ecf0f1" class="train-rect" rx="1" />
+                    <rect x="538" y="582" width="10" height="20" fill="#ecf0f1" class="train-rect" rx="1" />
+                    <rect x="551" y="582" width="10" height="20" fill="#ecf0f1" class="train-rect" rx="1" />
+                </g>
+
+                <!-- 列车标签 -->
+                <g class="train-labels">
+                    <text x="1320" y="450" class="train-label purple">m1045</text>
+                    <text x="1320" y="465" class="train-label purple" style="font-size:11px; fill:#5a6078">Queen Street</text>
+                    <text x="1320" y="478" class="train-label purple" style="font-size:11px; fill:#5a6078">5 20:59</text>
+                    
+                    <text x="580" y="630" class="train-label">▶ Com9040</text>
+                </g>
+
+                <!-- 轨道端点/起点装饰 -->
+                <g class="endpoints">
+                    <line x1="50" y1="395" x2="50" y2="405" stroke="#b0b8c8" stroke-width="3" />
+                    <line x1="50" y1="495" x2="50" y2="505" stroke="#b0b8c8" stroke-width="3" />
+                    <line x1="50" y1="595" x2="50" y2="605" stroke="#b0b8c8" stroke-width="3" />
+                    
+                    <line x1="50" y1="390" x2="70" y2="400" stroke="#b0b8c8" stroke-width="2" />
+                    <line x1="50" y1="410" x2="70" y2="400" stroke="#b0b8c8" stroke-width="2" />
+                    
+                    <line x1="50" y1="490" x2="70" y2="500" stroke="#b0b8c8" stroke-width="2" />
+                    <line x1="50" y1="510" x2="70" y2="500" stroke="#b0b8c8" stroke-width="2" />
+                    
+                    <line x1="50" y1="590" x2="70" y2="600" stroke="#b0b8c8" stroke-width="2" />
+                    <line x1="50" y1="610" x2="70" y2="600" stroke="#b0b8c8" stroke-width="2" />
+                </g>
+            </svg>
+        </div>
+
+        <!-- 底部控制栏 -->
+        <div class="bottom-bar">
+            <div class="time-control">
+                <div class="time-display">
+                    <span class="clock-icon">◷</span>
+                    <span>20:56</span>
+                    <span class="ms">43</span>
+                </div>
+                <div class="speed-controls">
+                    <div class="speed-btn">⏸</div>
+                    <div class="speed-btn active">▶ 1x</div>
+                    <div class="speed-btn">3x</div>
+                    <div class="speed-btn">10x</div>
+                    <div class="speed-btn">25x</div>
+                </div>
+            </div>
+
+            <div class="upcoming-panel">
+                <div class="upcoming-title">
+                    <span class="icon">📋</span>
+                    <span>UPCOMING TRAINS</span>
+                </div>
+                
+                <div class="train-item">
+                    <div class="train-id">
+                        <span class="train-icon">🚆</span>
+                        <span>COM2513</span>
+                        <span class="train-time">21:00</span>
+                    </div>
+                    <div class="train-dest">
+                        <span class="dest-tag dest-ashfield">ASHFIELD</span>
+                        <span class="platform-tag">🚉 4</span>
+                    </div>
+                </div>
+
+                <div class="train-item">
+                    <div class="train-id">
+                        <span class="train-icon">🚆</span>
+                        <span>COM7448</span>
+                        <span class="train-time">21:00</span>
+                    </div>
+                    <div class="train-dest">
+                        <span class="dest-tag dest-bridgeton">BRIDGETON</span>
+                        <span class="platform-tag">🚉 2</span>
+                    </div>
+                </div>
+
+                <div class="train-item">
+                    <div class="train-id">
+                        <span class="train-icon">🚆</span>
+                        <span>COM5066</span>
+                        <span class="train-time">21:06</span>
+                    </div>
+                    <div class="train-dest">
+                        <span class="dest-tag dest-bridgeton">BRIDGETON</span>
+                        <span class="platform-tag">🚉 2</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-actions">
+                <div class="bottom-action-btn">🏔</div>
+                <div class="bottom-action-btn">⚙</div>
+                <div class="bottom-action-btn">📋</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 简单的交互效果
+        document.querySelectorAll('.speed-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // 时间走动效果
+        let ms = 43;
+        setInterval(() => {
+            ms++;
+            if (ms >= 60) ms = 0;
+            document.querySelector('.ms').textContent = ms.toString().padStart(2, '0');
+        }, 1000);
+    </script>
+</body>
+</html>
