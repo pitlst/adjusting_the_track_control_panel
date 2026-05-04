@@ -82,7 +82,7 @@ class Track {
         if (this.label.text) {
             if (!this.labelObj) {
                 const trackX = (this.points[0] + this.points[2]) / 2;
-                const trackY = this.points[1];
+                const trackY = this.points[1] + this.label.size;
 
                 this.labelObj = new Text({
                     x: trackX,
@@ -142,6 +142,9 @@ class Arrow {
         if (this.shape) {
             this.shape.remove();
         }
+        if (this.borderShape) {
+            this.borderShape.remove();
+        }
 
         let x1, y1, x2, y2, x3, y3;
         if (this.facingRight) {
@@ -160,6 +163,16 @@ class Arrow {
             y3 = this.y + halfS;
         }
 
+        this.borderShape = new Line({
+            points: [x1, y1, x2, y2, x3, y3],
+            stroke: "#000000",
+            strokeWidth: 7,
+            strokeLineCap: "round",
+            strokeLineJoin: "round",
+            closed: true,
+        });
+        trackLayer.add(this.borderShape);
+
         this.shape = new Line({
             points: [x1, y1, x2, y2, x3, y3],
             stroke: C_TRACK,
@@ -170,6 +183,105 @@ class Arrow {
             closed: true,
         });
         trackLayer.add(this.shape);
+    }
+}
+
+// ========== Train 类 ==========
+class Train {
+    constructor(x, y, size, color = "#800080") {
+        this.x = x;
+        this.y = y;
+        this.size = size;
+        this.color = color;
+        this.label = { text: "", size: 14 };
+
+        this.parts = [];
+        this.labelObj = null;
+        this.updateShape();
+    }
+
+    setColor(color) {
+        this.color = color;
+        this.updateShape();
+    }
+
+    setLabel(text = "", size = 14) {
+        if (text.length > 20) text = text.substring(0, 20);
+        this.label = { text, size };
+    }
+
+    updateShape() {
+        this.parts.forEach(p => p.remove());
+        this.parts = [];
+
+        const squareSize = this.size;
+        const gap = squareSize / 4;
+        const totalWidth = 5 * squareSize + 4 * gap;
+        const startX = this.x;
+
+        for (let i = 0; i < 5; i++) {
+            const sqX = startX + i * (squareSize + gap);
+            const sqY = this.y - squareSize / 2;
+
+            if (i === 0 || i === 4) {
+                const borderRect = new Rect({
+                    x: sqX - 2,
+                    y: sqY - 2,
+                    width: squareSize + 4,
+                    height: squareSize + 4,
+                    stroke: "#000000",
+                    strokeWidth: 4,
+                    fill: C_TRACK,
+                    cornerRadius: 3,
+                });
+                trainLayer.add(borderRect);
+                this.parts.push(borderRect);
+
+                const innerRect = new Rect({
+                    x: sqX,
+                    y: sqY,
+                    width: squareSize,
+                    height: squareSize,
+                    stroke: C_TRACK,
+                    strokeWidth: 3,
+                    fill: "#000000",
+                    cornerRadius: 2,
+                });
+                trainLayer.add(innerRect);
+                this.parts.push(innerRect);
+            } else {
+                const rect = new Rect({
+                    x: sqX,
+                    y: sqY,
+                    width: squareSize,
+                    height: squareSize,
+                    fill: this.color,
+                    cornerRadius: 2,
+                });
+                trainLayer.add(rect);
+                this.parts.push(rect);
+            }
+        }
+
+        if (this.label.text) {
+            if (!this.labelObj) {
+                this.labelObj = new Text({
+                    x: startX + totalWidth / 2,
+                    y: this.y - squareSize / 2 - this.label.size - 5,
+                    text: this.label.text,
+                    fill: "#ffffff",
+                    fontSize: this.label.size,
+                    fontWeight: "bold",
+                    textAlign: "center",
+                });
+                labelLayer.add(this.labelObj);
+            }
+            this.labelObj.set({ text: this.label.text });
+        } else {
+            if (this.labelObj) {
+                this.labelObj.set({ text: "" });
+            }
+        }
     }
 }
 
@@ -223,11 +335,10 @@ const track_configs = [
     [[8, 18], [12, 18]],
 ];
 
-
+const _ped = 3;
 for (const _index of [18, 17, 16]) {
     let last_location = 12;
-    const _ped = 1.5;
-    for (let index = 0; index < 14; index++) {
+    for (let index = 0; index < 6; index++) {
         track_configs.push([[last_location, _index], [last_location + _ped, _index]]);
         arrow_configs.push([last_location, _index]);
         last_location += _ped;
@@ -235,8 +346,7 @@ for (const _index of [18, 17, 16]) {
 }
 for (const _index of [14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2]) {
     let last_location = 10;
-    const _ped = 1.5;
-    for (let index = 0; index < 14; index++) {
+    for (let index = 0; index < 6; index++) {
         track_configs.push([[last_location, _index], [last_location + _ped, _index]]);
         arrow_configs.push([last_location, _index]);
         last_location += _ped;
@@ -257,31 +367,33 @@ for (const element of arrow_configs) {
     all_arrows.push(arrow);
 }
 
-all_tracks[0].setLabel("进车位", C_BLUE, 16);
-all_tracks[28].setLabel("13号轨道", C_BLUE, 16);
-all_tracks[27].setLabel("12号轨道", C_BLUE, 16);
-all_tracks[26].setLabel("11号轨道", C_BLUE, 16);
-all_tracks[25].setLabel("10号轨道", C_BLUE, 16);
-all_tracks[24].setLabel("9号轨道", C_BLUE, 16);
-all_tracks[23].setLabel("8号轨道", C_BLUE, 16);
-all_tracks[22].setLabel("*1轨道", C_BLUE, 16);
-all_tracks[21].setLabel("*2轨道", C_BLUE, 16);
-all_tracks[20].setLabel("齿轨轨道", C_BLUE, 16);
-all_tracks[19].setLabel("5号轨道", C_BLUE, 16);
-all_tracks[18].setLabel("4号轨道", C_BLUE, 16);
-all_tracks[17].setLabel("3号轨道", C_BLUE, 16);
-all_tracks[16].setLabel("2号轨道", C_BLUE, 16);
+all_tracks[0].setLabel("进车位", C_BLUE, 12);
+all_tracks[28].setLabel("13号轨道", C_BLUE, 12);
+all_tracks[27].setLabel("12号轨道", C_BLUE, 12);
+all_tracks[26].setLabel("11号轨道", C_BLUE, 12);
+all_tracks[25].setLabel("10号轨道", C_BLUE, 12);
+all_tracks[24].setLabel("9号轨道", C_BLUE, 12);
+all_tracks[23].setLabel("8号轨道", C_BLUE, 12);
+all_tracks[22].setLabel("*1轨道", C_BLUE, 12);
+all_tracks[21].setLabel("*2轨道", C_BLUE, 12);
+all_tracks[20].setLabel("齿轨轨道", C_BLUE, 12);
+all_tracks[19].setLabel("5号轨道", C_BLUE, 12);
+all_tracks[18].setLabel("4号轨道", C_BLUE, 12);
+all_tracks[17].setLabel("3号轨道", C_BLUE, 12);
+all_tracks[16].setLabel("2号轨道", C_BLUE, 12);
 
-all_tracks[31].setLabel("1号轨道", C_BLUE, 16);
-all_tracks[34].setLabel("水阻1号轨道", C_BLUE, 16);
-all_tracks[36].setLabel("水阻2号轨道", C_BLUE, 16);
+all_tracks[31].setLabel("1号轨道", C_BLUE, 12);
+all_tracks[34].setLabel("水阻1号轨道", C_BLUE, 12);
+all_tracks[36].setLabel("水阻2号轨道", C_BLUE, 12);
 
 for (let _index = 0; _index < 16; _index++) {
-    for (let __index = 1; __index <= 14; __index++) {
-        all_tracks[36 + _index * 14 + __index].setLabel(`${__index}号位`, C_GREEN, 16);
+    for (let __index = 0; __index < 6; __index++) {
+        all_tracks[36 + _index * 6 + __index + 1].setLabel(`${__index + 8}号位`, C_GREEN, 12);
     }
 }
 
+const Train_0 = new Train(space_len * 12.75, space_len * 18, 15)
+Train_0.setLabel("香港工程车-02-TC1")
 
 // ========== 动画循环 ==========
 let tick = 0;
@@ -293,8 +405,15 @@ function loop() {
     } else if (tick % 60 === 30) {
         all_tracks[0].setColor(C_TRACK);
     }
+    if (tick % 60 === 0) {
+        all_tracks[37].setColor("#00ff00");
+    } else if (tick % 60 === 30) {
+        all_tracks[37].setColor(C_TRACK);
+    }
 
     all_tracks.forEach((t) => t.update());
+    all_arrows.forEach((t) => t.updateShape());
+    Train_0.updateShape();
     requestAnimationFrame(loop);
 }
 loop();
