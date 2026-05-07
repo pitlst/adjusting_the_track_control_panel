@@ -18,6 +18,7 @@ const C_RAIL_EDGE = "#00bfff";
 const C_RAIL_CENTER = "#7fb3d8";
 const C_SLEEPER_BLUE = "#3498db";
 const C_GREEN = "#2ecc71";
+const C_ERD = "#cc2e2e";
 const C_BLUE = "#c2dbeb";
 
 const trackLayer = new Group();
@@ -1201,6 +1202,14 @@ async function init() {
         } else if (tick % 60 === 30) {
             all_tracks[0].setColor(C_RAIL_GRAY);
         }
+        if (tick % 60 === 0) {
+            all_tracks[5].setColor(C_ERD);
+        } else if (tick % 60 === 30) {
+            all_tracks[5].setColor(C_RAIL_GRAY);
+        }
+
+        all_tracks[43].setColor(C_ERD);
+        // all_tracks[72].setColor(C_ERD);
 
         all_tracks.forEach(t => t.update());
         all_cars.forEach(c => c.update());
