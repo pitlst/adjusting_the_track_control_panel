@@ -1029,60 +1029,32 @@ async function init() {
             // 段位左边界限位标记
             const limitH = 38;
             const limitBarW = 4;
-            const ballR = 4;
+            const triH = 4;
+            const triHW = 3;
+            const gap = 12;
+            const borderOff = 1.5;
             const C_BALL = "#006f9f";
 
-            // 竖线（加粗深色）
-            limitLayer.add(new Rect({
-                x: x1 - limitBarW / 2,
-                y: y - limitH / 2,
-                width: limitBarW,
-                height: limitH,
+            // 上端点倒三角
+            limitLayer.add(new Line({
+                points: [
+                    x1 - triHW, y - limitH / 2 - triH - gap,
+                    x1 + triHW, y - limitH / 2 - triH - gap,
+                    x1, y - limitH / 2 - gap,
+                ],
+                stroke: C_BALL,
+                strokeWidth: 1,
                 fill: C_BALL,
-                cornerRadius: limitBarW / 2,
-            }));
-
-            // 上端点圆球（白色边线包裹）
-            limitLayer.add(new Rect({
-                x: x1 - ballR - 2,
-                y: y - limitH / 2 - ballR - 2,
-                width: (ballR + 2) * 2,
-                height: (ballR + 2) * 2,
-                fill: "#ffffff",
-                cornerRadius: ballR + 2,
-            }));
-            limitLayer.add(new Rect({
-                x: x1 - ballR - 1,
-                y: y - limitH / 2 - ballR - 1,
-                width: (ballR + 1) * 2,
-                height: (ballR + 1) * 2,
-                fill: C_BALL,
-                cornerRadius: ballR + 1,
-            }));
-
-            // 下端点圆球（白色边线包裹）
-            limitLayer.add(new Rect({
-                x: x1 - ballR - 2,
-                y: y + limitH / 2 - ballR - 2,
-                width: (ballR + 2) * 2,
-                height: (ballR + 2) * 2,
-                fill: "#ffffff",
-                cornerRadius: ballR + 2,
-            }));
-            limitLayer.add(new Rect({
-                x: x1 - ballR - 1,
-                y: y + limitH / 2 - ballR - 1,
-                width: (ballR + 1) * 2,
-                height: (ballR + 1) * 2,
-                fill: C_BALL,
-                cornerRadius: ballR + 1,
+                closed: true,
+                strokeLineCap: "round",
+                strokeLineJoin: "round",
             }));
         }
     }
 
     // 轨道名称标签（左端下方，左对齐）
     for (let row = 0; row < ROW_COUNT; row++) {
-        const ly = FIRST_TRACK_Y + row * TRACK_SPACING + 24;
+        const ly = FIRST_TRACK_Y + row * TRACK_SPACING + 38;
         labelLayer.add(new Text({
             x: TRACK_LEFT_X,
             y: ly,
