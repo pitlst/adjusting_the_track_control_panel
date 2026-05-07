@@ -13,6 +13,13 @@ async def index_html() -> Response:
     html_content = html_path.read_text(encoding="utf-8")
     return Response(content=html_content, media_type="text/html")
 
+@get("/index2")
+async def index_html_version2() -> Response:
+    html_path = Path("static/index_2.html")
+    html_content = html_path.read_text(encoding="utf-8")
+    return Response(content=html_content, media_type="text/html")
+
+
 
 @get("/favicon.ico")
 async def favicon() -> Response:
@@ -24,7 +31,7 @@ async def favicon() -> Response:
 
 
 app = Litestar(
-    route_handlers=[index_html, favicon],
+    route_handlers=[index_html, index_html_version2, favicon],
     static_files_config=[
         StaticFilesConfig(path="/static", directories=["static"], name="static")
     ],
